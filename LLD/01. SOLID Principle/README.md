@@ -430,3 +430,231 @@ With this solution, we have adhered to LSP by ensuring that substituting a `Rect
 By preserving the behavior of the base class in the subclass and allowing subclasses to provide their own implementation of the abstract method, we maintain substitutability, code reuse, and the ability to extend the hierarchy without breaking existing code that depends on the common behavior defined by the base class.
 
 Overall, adhering to LSP ensures a consistent and predictable class hierarchy, promoting reusability, extensibility, and the ability to substitute objects of the subclass for objects of the base class without introducing unexpected behavior or constraints.
+ 
+<br/>
+<br/> 
+
+## Interface Segregation Principle (ISP)
+
+Interface Segregation Principle (ISP) is one of the SOLID principles, which states that clients should not be forced to depend on interfaces they do not use. In other words, it promotes the idea of segregating large interfaces into smaller and more specific ones, tailored to the needs of the clients, to avoid unnecessary dependencies and potential coupling issues.
+
+Problem:
+Suppose we have a system that models different types of workers, such as `Worker` and `Robot`. There is an `Employee` interface that is implemented by both `Worker` and `Robot`, which includes methods for tasks such as `work()` and `takeBreak()`. However, this generic interface is problematic because not all workers can take breaks. Forcing the `Robot` class to implement the `takeBreak()` method violates the ISP since robots do not require breaks.
+
+Let's see the code example:
+
+```java
+interface Employee {
+    void work();
+    void takeBreak();
+}
+
+class Worker implements Employee {
+    public void work() {
+        System.out.println("Worker is working...");
+    }
+
+    public void takeBreak() {
+        System.out.println("Worker is taking a break...");
+    }
+}
+
+class Robot implements Employee {
+    public void work() {
+        System.out.println("Robot is working...");
+    }
+
+    public void takeBreak() {
+        throw new UnsupportedOperationException("Robots cannot take breaks");
+    }
+}
+```
+
+In the above code, the `Employee` interface includes both the `work()` and `takeBreak()` methods. The `Worker` class correctly implements both methods since workers can work and take breaks. However, the `Robot` class also implements the `takeBreak()` method, even though robots do not require breaks. This violates the ISP, as the `Robot` class is forced to implement an interface method that is not applicable.
+
+Now, let's see how this violation of ISP can cause problems:
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Employee worker = new Worker();
+        worker.work();
+        worker.takeBreak();
+
+        Employee robot = new Robot();
+        robot.work();
+        robot.takeBreak();
+    }
+}
+```
+
+In the `Main` class, we create instances of both `Worker` and `Robot` objects and treat them as `Employee` objects. When calling the `takeBreak()` method on the `robot` object, it throws an `UnsupportedOperationException` since robots cannot take breaks.
+
+This violation of ISP leads to a design flaw where clients (in this case, the `Main` class) are forced to depend on methods they do not need. It also introduces potential runtime errors when invoking unsupported operations.
+
+To resolve this ISP violation, we should segregate the `Employee` interface into smaller, more specific interfaces that cater to the needs of different types of workers.
+
+Solution:
+To adhere to ISP, we can segregate the `Employee` interface into two smaller interfaces: `Worker` and `Breakable`. The `Worker` interface will include the `work()` method, and the `Breakable` interface will include the `takeBreak()` method. This way, each interface represents a specific behavior, and classes can implement only the interfaces they require.
+
+Here's the updated code example that resolves the ISP violation:
+
+```java
+interface Worker {
+    void work();
+}
+
+interface Breakable {
+    void takeBreak();
+}
+
+class ConcreteWorker implements Worker, Breakable {
+    public void work() {
+        System.out.println("Worker is working...");
+    }
+
+    public void takeBreak() {
+        System.out.println("Worker is taking a break...");
+    }
+}
+
+class Robot implements Worker {
+    public void work() {
+        System.out.println("Robot is working...");
+    }
+}
+```
+
+In this solution, we have segregated the `Employee` interface into two smaller interfaces:
+
+ `Worker` and `Breakable`. The `ConcreteWorker` class implements both interfaces, indicating that it can work and take breaks. The `Robot` class only implements the `Worker` interface, reflecting the fact that robots do not need breaks.
+
+Now, let's revisit the client code:
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Worker worker = new ConcreteWorker();
+        worker.work();
+        Breakable breakableWorker = (Breakable) worker;
+        breakableWorker.takeBreak();
+
+        Worker robot = new Robot();
+        robot.work();
+    }
+}
+```
+
+In the updated `Main` class, we create instances of `ConcreteWorker` and `Robot` objects and treat them as `Worker` objects. The `ConcreteWorker` object can work and take breaks, so we invoke both methods. However, we need to explicitly cast the `worker` object to `Breakable` to access the `takeBreak()` method.
+
+On the other hand, the `Robot` object only implements the `Worker` interface, so we can invoke the `work()` method directly.
+
+With this solution, we have adhered to ISP by segregating the large `Employee` interface into smaller and more specific interfaces. Clients can now depend only on the interfaces they need, reducing unnecessary dependencies and potential issues. Each class implements only the relevant interfaces, promoting a more cohesive and flexible design.
+
+By segregating interfaces, we achieve better code organization, improved maintainability, and enhanced flexibility in adding or removing behaviors as needed.
+
+
+<br/>
+<br/>
+<br/>
+
+
+## Dependency Inversion Principle (DIP):
+The Dependency Inversion Principle states that high-level modules should not depend on low-level modules. Both should depend on abstractions. In other words, the principle promotes the idea that classes should depend on interfaces or abstract classes rather than concrete implementations. It aims to decouple components and promote flexibility, extensibility, and easier maintenance.
+
+Problem:
+Suppose we have a `NotificationService` class that sends notifications to users via email. The class directly depends on the concrete implementation of the `EmailSender` class, violating the Dependency Inversion Principle. This tight coupling makes it difficult to switch to a different notification method or introduce new notification types without modifying the `NotificationService` class.
+
+Let's see the code example:
+
+```java
+class EmailSender {
+    public void sendEmail(String recipient, String message) {
+        System.out.println("Sending email to " + recipient + ": " + message);
+    }
+}
+
+class NotificationService {
+    private EmailSender emailSender;
+
+    public NotificationService() {
+        this.emailSender = new EmailSender();
+    }
+
+    public void sendNotification(String recipient, String message) {
+        emailSender.sendEmail(recipient, message);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        NotificationService notificationService = new NotificationService();
+        notificationService.sendNotification("user@example.com", "Hello, there!");
+    }
+}
+```
+
+In the above code, the `NotificationService` class directly depends on the concrete implementation of the `EmailSender` class. It creates an instance of `EmailSender` in its constructor and uses it to send notifications via email.
+
+This design violates the DIP because high-level modules (such as `NotificationService`) should not depend on low-level modules (`EmailSender`). It tightly couples the `NotificationService` to a specific implementation, making it difficult to switch to other notification methods or extend the system with additional notification types.
+
+Now, let's see how this violation of DIP can cause problems:
+
+- The `NotificationService` is tightly coupled to the `EmailSender` class, making it challenging to introduce new notification methods, such as SMS or push notifications, without modifying the `NotificationService` class.
+- Switching to a different email sending library or provider would require changes in the `NotificationService` class.
+- Unit testing the `NotificationService` class becomes difficult as it cannot be easily isolated from the concrete `EmailSender` implementation.
+
+To resolve this DIP violation, we need to invert the dependencies and introduce abstractions to decouple the high-level module (`NotificationService`) from the low-level module (`EmailSender`).
+
+Solution:
+To adhere to DIP, we introduce an abstraction, such as an interface (`MessageSender`), that both the `NotificationService` and `EmailSender` depend on. The `NotificationService` can then rely on the abstraction rather than the concrete implementation of the `EmailSender`.
+
+Here's the updated code example that resolves the DIP violation:
+
+```java
+interface MessageSender {
+    void sendMessage(String recipient, String message);
+}
+
+class EmailSender implements MessageSender {
+    public void sendMessage(String recipient, String message) {
+        System.out.println("Sending email to " + recipient + ": " + message);
+    }
+}
+
+class NotificationService {
+    private MessageSender messageSender;
+
+    public NotificationService(MessageSender messageSender) {
+        this.messageSender = messageSender;
+    }
+
+    public void sendNotification(String recipient, String message) {
+        messageSender.sendMessage(recipient, message);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        MessageSender emailSender = new EmailSender();
+        NotificationService notificationService = new NotificationService(emailSender);
+        notificationService.sendNotification("user@example.com", "Hello, there!");
+    }
+}
+```
+
+In the updated code, we introduce the `MessageSender` interface that defines the `sendMessage()` method. Both the `EmailSender` and `NotificationService` depend on this interface.
+
+
+
+The `NotificationService` class now accepts an instance of `MessageSender` through its constructor, allowing different implementations of `MessageSender` to be passed in, such as `EmailSender`, `SMSSender`, or any other sender that implements the `MessageSender` interface.
+
+By using an abstraction (interface), we've decoupled the `NotificationService` from the concrete `EmailSender` implementation. This adheres to the DIP as high-level modules now depend on abstractions rather than concrete implementations.
+
+With this solution, we gain the following benefits:
+
+- The `NotificationService` is decoupled from the `EmailSender`, allowing for easier substitution of different message senders without modifying the `NotificationService` class.
+- New notification methods can be introduced by implementing the `MessageSender` interface, and the `NotificationService` can use them without any changes.
+- The `NotificationService` can be easily unit tested by providing a mock implementation of the `MessageSender` interface.
+
+Overall, adhering to the Dependency Inversion Principle (DIP) promotes loose coupling, flexibility, and extensibility in software design by introducing abstractions and inverting dependencies between high-level and low-level modules.
